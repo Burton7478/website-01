@@ -1,29 +1,52 @@
 import { OBJLoader } from "https://cdn.skypack.dev/three@0.129.0/examples/jsm/loaders/OBJLoader.js";
+import ModelCache from "./modelCache";
+
+const modelCache = new ModelCache();
+await modelCache.initDB();
 
 export function loadAllModels() {
     return Promise.all([
-        loadModel('RobotX'),
-        loadModel('PawnA'),
-        loadModel('Hert')
+        loadModel('/models/RobotX.obj'),
+        loadModel('/models/PawnA.obj'),
+        loadModel('/models/Hert.obj')
     ]).then((results) => {
         return Promise.resolve(results);
     })
 }
 
-function loadModel(name) {
-    const loader = new OBJLoader();
+export function loadModel(url) {
+    console.log("loadModel url:", url);
     return new Promise((resolve, reject) => {
-        loader.load(
-            `/models/${name}.obj`,
-            (o) => {
-                return resolve(o)
-            },
-            undefined,
-            (err) => console.error("Obj1 加载错误", err)
-        );
+        // Three.js 加载 OBJ 模型
+        return loadModelFromCache(url).then((objUrl) => {
+            const loader = new OBJLoader();
+            loader.load(objUrl, (model) => {
+                console.log("model load done:", model);
+                resolve(model);
+            });
+        })
     })
-
 }
+
+// 加载模型时优先尝试读取缓存
+function loadModelFromCache(url) {
+    return new Promise((resolve, reject) => {
+        modelCache.getModel(url).then(async (blob) => {
+            if (!blob) {
+                // 无缓存时从服务器下载
+                const response = await fetch(url)
+                blob = await response.blob();
+                await modelCache.cacheModel(url, blob);
+            }
+            // 生成 Blob URL 供 Three.js 加载
+            const blobUrl = URL.createObjectURL(blob);
+            resolve(blobUrl)
+        })
+    })
+}
+
+
+
 
 
 // // 1) RobotX

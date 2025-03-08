@@ -11,6 +11,78 @@ import { gsap } from 'gsap';
 
 import { loadAllModels } from './loadModel';
 
+
+
+loadAllModels().then((results) => {
+  console.log('load all models:', results);
+
+  obj1 = results[0];
+  obj2 = results[1];
+  obj3 = results[2];
+
+
+  //放在稍微偏左
+  obj1.position.set(50, 50, 0);
+  obj1.scale.set(0.01, 0.01, 0.01);
+  scene.add(obj1);
+
+
+  obj2.position.set(-50, -50, 0);
+  obj2.scale.set(0.01, 0.01, 0.01);
+  scene.add(obj2);
+
+
+  obj3.position.set(0, 0, 0);
+  obj3.scale.set(0.005, 0.005, 0.005);
+  scene.add(obj3);
+
+  // 在 obj3 内部添加高强度点光
+  const innerLight = new THREE.PointLight(0xffffff, 2);
+  obj3.add(innerLight);
+
+  // 分别计算3个obj的相机位置
+  const camPos1 = getCameraPositionForObj(obj1, 1.5); // 顶部 => obj1
+  const camPos3 = getCameraPositionForObj(obj3, 1.5); // 中间 => obj3
+  const camPos2 = getCameraPositionForObj(obj2, 1.5); // 底部 => obj2
+
+  // timeline: paused, 我们用 progress() 来控制
+  cameraTL = gsap.timeline({ paused: true });
+
+  // 让 timeline 在 0 -> 0.5 这段区间，从 camPos1 -> camPos3
+  // 再 0.5 -> 1 这段，从 camPos3 -> camPos2
+  // 这样你滚动 0% =>  obj1,   50% =>  obj3,   100% =>  obj2
+
+  // 第一个段：0~0.5
+  cameraTL.fromTo(
+    camera.position,
+    { x: camPos1.x, y: camPos1.y, z: camPos1.z },   // 起点
+    {
+      x: camPos3.x,
+      y: camPos3.y,
+      z: camPos3.z,
+      duration: 0.5, // timeline的相对长度
+      onUpdate: () => {
+        camera.lookAt(obj1.position); // 这里也可直接写(0,0,0) or box center
+        camera.updateProjectionMatrix();
+      }
+    },
+    0  // 起始时间
+  );
+
+  // 第二个段：0.5~1.0
+  cameraTL.to(camera.position, {
+    x: camPos2.x,
+    y: camPos2.y,
+    z: camPos2.z,
+    duration: 0.5,
+    onUpdate: () => {
+      camera.lookAt(obj2.position); // 也可以 obj2.position, 自行选择
+      camera.updateProjectionMatrix();
+    }
+  }, 0.5);
+})
+
+
 //控制网页跳转
 let navLinks = document.querySelectorAll("a.inner-link");
 navLinks.forEach((item) => {
@@ -319,7 +391,7 @@ let cameraTL = null; // GSAP timeline
 
 // 监听滚动 => 更新 timeline 的 progress
 window.addEventListener('scroll',
-  throttle(onScroll, 100));
+  throttle(onScroll, 1));
 
 function onScroll() {
   console.log('onScroll')
@@ -345,76 +417,3 @@ window.addEventListener('resize', () => {
 });
 
 
-loadAllModels().then((results) => {
-  console.log('load all models:', results);
-
-
-  obj1 = results[0];
-  obj2 = results[1];
-  obj3 = results[2];
-
-
-  //放在稍微偏左
-  obj1.position.set(50, 50, 0);
-  obj1.scale.set(0.01, 0.01, 0.01);
-  scene.add(obj1);
-
-
-  obj2.position.set(-50, -50, 0);
-  obj2.scale.set(0.01, 0.01, 0.01);
-  scene.add(obj2);
-
-
-  obj3.position.set(0, 0, 0);
-  obj3.scale.set(0.005, 0.005, 0.005);
-  scene.add(obj3);
-
-  // 在 obj3 内部添加高强度点光
-  const innerLight = new THREE.PointLight(0xffffff, 2);
-  obj3.add(innerLight);
-
-
-
-  // 分别计算3个obj的相机位置
-  const camPos1 = getCameraPositionForObj(obj1, 1.5); // 顶部 => obj1
-  const camPos3 = getCameraPositionForObj(obj3, 1.5); // 中间 => obj3
-  const camPos2 = getCameraPositionForObj(obj2, 1.5); // 底部 => obj2
-
-  // timeline: paused, 我们用 progress() 来控制
-  cameraTL = gsap.timeline({ paused: true });
-
-  // 让 timeline 在 0 -> 0.5 这段区间，从 camPos1 -> camPos3
-  // 再 0.5 -> 1 这段，从 camPos3 -> camPos2
-  // 这样你滚动 0% =>  obj1,   50% =>  obj3,   100% =>  obj2
-
-  // 第一个段：0~0.5
-  cameraTL.fromTo(
-    camera.position,
-    { x: camPos1.x, y: camPos1.y, z: camPos1.z },   // 起点
-    {
-      x: camPos3.x,
-      y: camPos3.y,
-      z: camPos3.z,
-      duration: 0.5, // timeline的相对长度
-      onUpdate: () => {
-        camera.lookAt(obj1.position); // 这里也可直接写(0,0,0) or box center
-        camera.updateProjectionMatrix();
-      }
-    },
-    0  // 起始时间
-  );
-
-  // 第二个段：0.5~1.0
-  cameraTL.to(camera.position, {
-    x: camPos2.x,
-    y: camPos2.y,
-    z: camPos2.z,
-    duration: 0.5,
-    onUpdate: () => {
-      camera.lookAt(obj2.position); // 也可以 obj2.position, 自行选择
-      camera.updateProjectionMatrix();
-    }
-  }, 0.5);
-
-
-})
