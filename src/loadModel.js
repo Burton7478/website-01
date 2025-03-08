@@ -2,15 +2,17 @@ import { OBJLoader } from "https://cdn.skypack.dev/three@0.129.0/examples/jsm/lo
 import ModelCache from "./modelCache";
 
 const modelCache = new ModelCache();
-await modelCache.initDB();
+
 
 export function loadAllModels() {
-    return Promise.all([
-        loadModel('/models/RobotX.obj'),
-        loadModel('/models/PawnA.obj'),
-        loadModel('/models/Hert.obj')
-    ]).then((results) => {
-        return Promise.resolve(results);
+    return modelCache.initDB().then(() => {
+        return Promise.all([
+            loadModel('/models/RobotX.obj'),
+            loadModel('/models/PawnA.obj'),
+            loadModel('/models/Hert.obj')
+        ]).then((results) => {
+            return Promise.resolve(results);
+        })
     })
 }
 
