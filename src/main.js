@@ -3,10 +3,13 @@ import "./Style.scss";
 import * as THREE from "https://cdn.skypack.dev/three@0.129.0/build/three.module.js";
 import { OrbitControls } from "https://cdn.skypack.dev/three@0.129.0/examples/jsm/controls/OrbitControls.js";
 import { OBJLoader } from "https://cdn.skypack.dev/three@0.129.0/examples/jsm/loaders/OBJLoader.js";
+import { throttle } from 'lodash-es';
 
 import VanillaTilt from "vanilla-tilt";
 import { initBoxCarousel } from "./IconChange.js";
 import { gsap } from 'gsap';
+
+import { loadAllModels } from './loadModel';
 
 //控制网页跳转
 let navLinks = document.querySelectorAll("a.inner-link");
@@ -71,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // 点击播放图标：开始/暂停切换
-  playIcon.addEventListener('click', function() {
+  playIcon.addEventListener('click', function () {
     if (video.paused) {
       video.play();
       playIcon.style.display = 'none';
@@ -82,20 +85,20 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // 视频暂停事件 - 显示图标
-  video.addEventListener('pause', function() {
+  video.addEventListener('pause', function () {
     playIcon.style.display = 'inline';
   });
 
   // 视频结束事件 - 显示图标
-  video.addEventListener('ended', function() {
+  video.addEventListener('ended', function () {
     playIcon.style.display = 'inline';
   });
 
   // 双击全屏
-  video.addEventListener('dblclick', function() {
+  video.addEventListener('dblclick', function () {
     if (video.requestFullscreen) {
       video.requestFullscreen();
-    } else if (video.webkitEnterFullscreen) { 
+    } else if (video.webkitEnterFullscreen) {
       video.webkitEnterFullscreen(); // Safari
     }
   });
@@ -110,7 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
     { type: "image", src: "images/Skill/S1.png", width: 200, height: 130, alt: "Card 1", title: "VFX" },
     { type: "image", src: "images/Skill/S2.png", width: 220, height: 150, alt: "Card 2", title: "OnlineSystem" },
     { type: "image", src: "images/Skill/S3.png", width: 180, height: 120, alt: "Card 3", title: "AI" },
-    { type: "image", src: "images/Skill/S4.png", width: 320, height: 240, alt: "Card 4",title: "WebSite" },
+    { type: "image", src: "images/Skill/S4.png", width: 320, height: 240, alt: "Card 4", title: "WebSite" },
     { type: "image", src: "images/Skill/S5.png", width: 220, height: 140, alt: "Card 5", title: "Interaction Art" },
     { type: "image", src: "images/Skill/S6.png", width: 220, height: 140, alt: "Card 6", title: "Game Engine" },
   ];
@@ -133,7 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     { type: "video", src: "video/v1.mp4", width: 320, height: 240 }, // 示例视频
     { type: "video", src: "video/v1.mp4", width: 320, height: 240 }, // 示例视频
-  
+
   ];
 
   initBoxCarousel("#work2 .container19 .box", data3);
@@ -213,7 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
-  75, 
+  75,
   window.innerWidth / window.innerHeight,
   0.1,
   1000
@@ -231,10 +234,10 @@ camera.position.set(0, 0, 30);
 // OrbitControls（可鼠标旋转、缩放），可选
 const controls = new OrbitControls(camera, renderer.domElement);
 
-// ------------------- 载入三个OBJ模型 -------------------
-const loader1 = new OBJLoader();
-const loader2 = new OBJLoader();
-const loader3 = new OBJLoader();
+// // ------------------- 载入三个OBJ模型 -------------------
+// const loader1 = new OBJLoader();
+// const loader2 = new OBJLoader();
+// const loader3 = new OBJLoader();
 
 let obj1, obj2, obj3;
 
@@ -256,50 +259,7 @@ function getCameraPositionForObj(obj, extraScale = 1.5) {
   return new THREE.Vector3(center.x, center.y, center.z + cameraDist);
 }
 
-// 1) RobotX
-loader1.load(
-  '/models/RobotX.obj',
-  (o) => {
-    obj1 = o;
-    // 放在稍微偏左
-    obj1.position.set(50, 50, 0);
-    obj1.scale.set(0.01, 0.01, 0.01);
-    scene.add(obj1);
-  },
-  undefined,
-  (err) => console.error("Obj1 加载错误", err)
-);
 
-// 2) PawnA
-loader2.load(
-  '/models/PawnA.obj',
-  (o) => {
-    obj2 = o;
-    // 放在稍微偏右
-    obj2.position.set(-50, -50, 0);
-    obj2.scale.set(0.01, 0.01, 0.01);
-    scene.add(obj2);
-  },
-  undefined,
-  (err) => console.error("Obj2 加载错误", err)
-);
-
-// 3) Hert
-loader3.load(
-  '/models/Hert.obj',
-  (o) => {
-    obj3 = o;
-    obj3.position.set(0, 0, 0);
-    obj3.scale.set(0.005, 0.005, 0.005);
-    scene.add(obj3);
-
-    // 在 obj3 内部添加高强度点光
-    const innerLight = new THREE.PointLight(0xffffff, 2);
-    obj3.add(innerLight);
-  },
-  undefined,
-  (err) => console.error("Obj3 加载错误", err)
-);
 
 // ------------------- 星星，放在 pivotGroup 中绕中心转 -------------------
 const pivotGroup = new THREE.Group();
@@ -335,9 +295,9 @@ function animate() {
   pivotGroup.rotation.y += 0.0005;
 
   // 如果想让obj1/obj2/obj3自转，也可以在这里加
-   if (obj1) obj1.rotation.y += 0.01;
-   if (obj2) obj2.rotation.y += 0.01;
-   if (obj3) obj3.rotation.y += 0.01;
+  if (obj1) obj1.rotation.y += 0.01;
+  if (obj2) obj2.rotation.y += 0.01;
+  if (obj3) obj3.rotation.y += 0.01;
 
   controls.update();
   renderer.render(scene, camera);
@@ -355,12 +315,65 @@ animate();
 
 let cameraTL = null; // GSAP timeline
 
-// 等若干时间（或检测3个obj是否加载完）后再创建timeline
-setTimeout(() => {
-  if (!obj1 || !obj2 || !obj3) {
-    console.warn("某些 OBJ 还没加载，继续等待或仅使用已加载的.");
-    return;
-  }
+
+
+// 监听滚动 => 更新 timeline 的 progress
+window.addEventListener('scroll',
+  throttle(onScroll, 100));
+
+function onScroll() {
+  console.log('onScroll')
+  if (!cameraTL) return;  // timeline还没建好
+
+  const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  if (docHeight <= 0) return;
+
+  // 滚动百分比
+  let scrollPercent = scrollTop / docHeight;
+  scrollPercent = Math.max(0, Math.min(1, scrollPercent));
+
+  // 同步到 timeline
+  cameraTL.progress(scrollPercent);
+}
+
+// 监听窗口大小变化
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+
+loadAllModels().then((results) => {
+  console.log('load all models:', results);
+
+
+  obj1 = results[0];
+  obj2 = results[1];
+  obj3 = results[2];
+
+
+  //放在稍微偏左
+  obj1.position.set(50, 50, 0);
+  obj1.scale.set(0.01, 0.01, 0.01);
+  scene.add(obj1);
+
+
+  obj2.position.set(-50, -50, 0);
+  obj2.scale.set(0.01, 0.01, 0.01);
+  scene.add(obj2);
+
+
+  obj3.position.set(0, 0, 0);
+  obj3.scale.set(0.005, 0.005, 0.005);
+  scene.add(obj3);
+
+  // 在 obj3 内部添加高强度点光
+  const innerLight = new THREE.PointLight(0xffffff, 2);
+  obj3.add(innerLight);
+
+
 
   // 分别计算3个obj的相机位置
   const camPos1 = getCameraPositionForObj(obj1, 1.5); // 顶部 => obj1
@@ -379,8 +392,8 @@ setTimeout(() => {
     camera.position,
     { x: camPos1.x, y: camPos1.y, z: camPos1.z },   // 起点
     {
-      x: camPos3.x, 
-      y: camPos3.y, 
+      x: camPos3.x,
+      y: camPos3.y,
       z: camPos3.z,
       duration: 0.5, // timeline的相对长度
       onUpdate: () => {
@@ -401,32 +414,7 @@ setTimeout(() => {
       camera.lookAt(obj2.position); // 也可以 obj2.position, 自行选择
       camera.updateProjectionMatrix();
     }
-
-    
   }, 0.5);
 
-}, 10000);  // 3秒后执行（简易处理，如果模型加载慢可以调大或做更好的检测）
 
-// 监听滚动 => 更新 timeline 的 progress
-window.addEventListener('scroll', onScroll);
-function onScroll() {
-  if (!cameraTL) return; // timeline还没建好
-
-  const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-  if (docHeight <= 0) return;
-
-  // 滚动百分比
-  let scrollPercent = scrollTop / docHeight;
-  scrollPercent = Math.max(0, Math.min(1, scrollPercent));
-
-  // 同步到 timeline
-  cameraTL.progress(scrollPercent);
-}
-
-// 监听窗口大小变化
-window.addEventListener('resize', () => {
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-});
+})
